@@ -1,0 +1,239 @@
+import os
+import sys
+import subprocess
+import asyncio
+import logging
+import random
+import json
+import requests
+from datetime import datetime
+from aiogram import Bot, Dispatcher, types
+from aiogram.filters import Command
+from aiogram.types import Message, CallbackQuery
+from aiogram.utils.keyboard import InlineKeyboardBuilder
+import aiohttp
+
+# ========== ТВІЙ ТОКЕН ==========
+TOKEN = "8673920070:AAEPokZAIm8PulCR6RXv2XjUIM77KvVdpgY"
+# ================================
+
+# ---------- АВТОМАТИЧНЕ ВСТАНОВЛЕННЯ БІБЛІОТЕК ----------
+def install_dependencies():
+    """Само встановлює всі потрібні бібліотеки"""
+    required = ['aiogram', 'aiohttp', 'requests']
+    for package in required:
+        try:
+            __import__(package.replace('-', '_'))
+        except ImportError:
+            print(f"⏳ Встановлюю {package}...")
+            subprocess.check_call([sys.executable, "-m", "pip", "install", "-q", package])
+
+install_dependencies()
+
+# Ініціалізація бота
+bot = Bot(token=TOKEN, parse_mode="HTML")
+dp = Dispatcher()
+logging.basicConfig(level=logging.INFO)
+
+# ---------- API ФУНКЦІЇ ----------
+async def fetch_api(url):
+    async with aiohttp.ClientSession() as session:
+        try:
+            async with session.get(url, timeout=10) as resp:
+                if resp.status == 200:
+                    return await resp.json()
+        except:
+            return None
+
+async def get_cat():
+    data = await fetch_api('https://api.thecatapi.com/v1/images/search')
+    return data[0]['url'] if data else 'https://cataas.com/cat'
+
+async def get_dog():
+    data = await fetch_api('https://random.dog/woof.json')
+    return data['url'] if data else 'https://images.dog.ceo/breeds/hound-english/n02089973_1.jpg'
+
+async def get_fox():
+    data = await fetch_api('https://randomfox.ca/floof/')
+    return data['image'] if data else 'https://randomfox.ca/images/1.jpg'
+
+async def get_meme():
+    data = await fetch_api('https://meme-api.com/gimme')
+    return data['url'] if data else 'https://i.imgur.com/By6P0Eg.jpg'
+
+async def get_quote():
+    data = await fetch_api('https://api.quotable.io/random')
+    return f"“{data['content']}”\n— {data['author']}" if data else "“Життя прекрасне!”"
+
+async def get_joke():
+    data = await fetch_api('https://v2.jokeapi.dev/joke/Any?type=single')
+    return data['joke'] if data and 'joke' in data else "Чому програмісти люблять темряву? Тому що світло приваблює баги!"
+
+async def get_advice():
+    data = await fetch_api('https://api.adviceslip.com/advice')
+    return data['slip']['advice'] if data else "Будь собою!"
+
+async def get_fact():
+    facts = [
+        "🐱 Коти можуть видавати понад 100 різних звуків!",
+        "🐶 Собаки розуміють до 250 слів і жестів!",
+        "🦒 Жирафи сплять лише 30 хвилин на день!",
+        "🐧 Пінгвіни можуть стрибати до 2 метрів!",
+        "🐋 Синій кит важить як 30 слонів!",
+        "🦉 Сови можуть повертати голову на 270 градусів!",
+        "🐘 Слони – єдині ссавці, які не можуть стрибати!",
+        "🦩 Фламінго рожеві через те, що їдять креветок!",
+    ]
+    return random.choice(facts)
+
+# ---------- ГОЛОВНЕ МЕНЮ ----------
+def get_main_keyboard():
+    builder = InlineKeyboardBuilder()
+    
+    buttons = [
+        ("🖼️ Рандом фото", "random_photo"),
+        ("🐱 Котик", "cat_photo"),
+        ("🐶 Собачка", "dog_photo"),
+        ("🦊 Лисичка", "fox_photo"),
+        ("🎬 Рандом відео", "random_video"),
+        ("🐕 Танцююча собака", "dancing_dog"),
+        ("🐱 Кумедний кіт", "funny_cat"),
+        ("🎭 Випадковий мем", "random_meme"),
+        ("📝 Випадкова цитата", "random_quote"),
+        ("😄 Випадковий жарт", "random_joke"),
+        ("💡 Випадкова порада", "random_advice"),
+        ("🌈 Випадковий факт", "random_fact"),
+        ("🎲 Кинути кубик", "roll_dice"),
+        ("🪙 Підкинути монетку", "flip_coin"),
+        ("🔮 Випадкове число", "random_number"),
+        ("🎯 Вгадай день", "guess_day"),
+        ("⏰ Точний час", "current_time"),
+        ("📅 Сьогоднішня дата", "current_date"),
+        ("🌐 Мій IP", "my_ip"),
+        ("🆔 Мій ID", "my_id"),
+        ("📊 Статистика", "stats"),
+        ("❓ Допомога", "help"),
+        ("🔄 Оновити меню", "refresh"),
+    ]
+    
+    for text, callback in buttons:
+        builder.button(text=text, callback_data=callback)
+    
+    builder.adjust(4)
+    return builder.as_markup()
+
+# ---------- КОМАНДА START ----------
+@dp.message(Command("start"))
+async def cmd_start(message: Message):
+    text = (
+        "🚀 <b>МІЙ СУПЕР-БОТ</b> 🚀\n\n"
+        "🔥 <b>20+ ФУНКЦІЙ:</b>\n\n"
+        "🐱 <b>Тварини:</b> котики, собачки, лисички\n"
+        "🎬 <b>Відео:</b> танці, приколи, меми\n"
+        "📝 <b>Текст:</b> цитати, жарти, поради, факти\n"
+        "🎮 <b>Ігри:</b> кубик, монетка, числа\n"
+        "⏰ <b>Корисне:</b> час, дата, IP, ID\n\n"
+        "👇 <b>ТИЦЯЙ НА КНОПКИ:</b>"
+    )
+    await message.answer(text, reply_markup=get_main_keyboard())
+
+# ---------- ОБРОБКА КНОПОК ----------
+@dp.callback_query(lambda c: True)
+async def process_callback(callback: CallbackQuery):
+    data = callback.data
+    await callback.answer()
+    
+    try:
+        if data == "random_photo":
+            await callback.message.answer_photo("https://picsum.photos/800/600", caption="🖼️ Випадкове фото")
+        
+        elif data == "cat_photo":
+            url = await get_cat()
+            await callback.message.answer_photo(url, caption="🐱 Ось тобі котик!")
+        
+        elif data == "dog_photo":
+            url = await get_dog()
+            await callback.message.answer_photo(url, caption="🐶 Ось тобі собачка!")
+        
+        elif data == "fox_photo":
+            url = await get_fox()
+            await callback.message.answer_photo(url, caption="🦊 Ось тобі лисичка!")
+        
+        elif data == "random_video":
+            videos = [
+                "https://media.giphy.com/media/26gR2qGRnxxXAvhBu/giphy.gif",
+                "https://media.giphy.com/media/l0HlNQ03J5JxX6lva/giphy.gif",
+            ]
+            await callback.message.answer_animation(random.choice(videos), caption="🎬 Випадкове відео")
+        
+        elif data == "dancing_dog":
+            await callback.message.answer_animation("https://media1.tenor.com/m/-q_tUfd8mDIAAAAC/dog-dancing.gif", caption="🐕 Танцююча собачка!")
+        
+        elif data == "funny_cat":
+            await callback.message.answer_animation("https://media.giphy.com/media/3o7abB06u9bNzA8LC8/giphy.gif", caption="🐱 Кумедний котик!")
+        
+        elif data == "random_meme":
+            url = await get_meme()
+            await callback.message.answer_photo(url, caption="🎭 Свіжий мем")
+        
+        elif data == "random_quote":
+            await callback.message.answer(f"📝 {await get_quote()}")
+        
+        elif data == "random_joke":
+            await callback.message.answer(f"😄 {await get_joke()}")
+        
+        elif data == "random_advice":
+            await callback.message.answer(f"💡 {await get_advice()}")
+        
+        elif data == "random_fact":
+            await callback.message.answer(f"🌈 {await get_fact()}")
+        
+        elif data == "roll_dice":
+            await callback.message.answer(f"🎲 Випало: {random.randint(1,6)}")
+        
+        elif data == "flip_coin":
+            await callback.message.answer(f"🪙 Випало: {random.choice(['Орел','Решка'])}")
+        
+        elif data == "random_number":
+            await callback.message.answer(f"🔢 Число: {random.randint(1,100)}")
+        
+        elif data == "guess_day":
+            days = ["понеділок","вівторок","середа","четвер","п'ятниця","субота","неділя"]
+            await callback.message.answer(f"🎯 Сьогодні: {random.choice(days)}!")
+        
+        elif data == "current_time":
+            await callback.message.answer(f"⏰ Час: {datetime.now().strftime('%H:%M:%S')}")
+        
+        elif data == "current_date":
+            await callback.message.answer(f"📅 Дата: {datetime.now().strftime('%d.%m.%Y')}")
+        
+        elif data == "my_ip":
+            async with aiohttp.ClientSession() as session:
+                async with session.get('https://api.ipify.org') as resp:
+                    ip = await resp.text()
+                    await callback.message.answer(f"🌐 Твій IP: {ip}")
+        
+        elif data == "my_id":
+            await callback.message.answer(f"🆔 Твій ID: <code>{callback.from_user.id}</code>")
+        
+        elif data == "stats":
+            await callback.message.answer(f"📊 Статистика:\n👤 Ім'я: {callback.from_user.full_name}\n🆔 ID: {callback.from_user.id}")
+        
+        elif data == "help":
+            await callback.message.answer("❓ Допомога\n\nПросто натискай кнопки – все працює!\nБот має 20+ функцій.")
+        
+        elif data == "refresh":
+            await callback.message.edit_text("🚀 Меню оновлено:", reply_markup=get_main_keyboard())
+    
+    except Exception as e:
+        await callback.message.answer(f"❌ Помилка: {str(e)[:50]}")
+
+# ---------- ЗАПУСК ----------
+async def main():
+    print("🚀 БОТ ЗАПУЩЕНО!")
+    print(f"👉 Твій бот: https://t.me/{(await bot.get_me()).username}")
+    print("✅ Працює! Можеш залишати ПК увімкненим.")
+    await dp.start_polling(bot)
+
+if __name__ == "__main__":
+    asyncio.run(main())
