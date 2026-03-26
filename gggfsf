@@ -1,7 +1,7 @@
--- ========== RP CITY GENERATOR V3 - MEGA CITY ==========
--- Встав в ServerScriptService, натисни Play, карта згенерується автоматично
+-- ========== MEGA RP CITY V4 - ULTRA DETAILED ==========
+-- Гігантська карта з чорними дорогами, білою розміткою, деталізованими будівлями
 
-local function createPart(parent, name, size, position, color, material, transparency)
+local function createPart(parent, name, size, position, color, material, transparency, reflect)
 	local part = Instance.new("Part")
 	part.Name = name
 	part.Size = size
@@ -10,15 +10,37 @@ local function createPart(parent, name, size, position, color, material, transpa
 	part.Material = material or Enum.Material.Plastic
 	part.Anchored = true
 	part.CanCollide = true
-	if transparency then
-		part.Transparency = transparency
-	end
+	if transparency then part.Transparency = transparency end
+	if reflect then part.Reflectance = 0.3 end
 	part.Parent = parent
 	return part
 end
 
-local function createUnion(parent, name, parts, color)
-	-- спрощено для сумісності
+local function createWedge(parent, name, size, position, color, material)
+	local wedge = Instance.new("WedgePart")
+	wedge.Name = name
+	wedge.Size = size
+	wedge.Position = position
+	wedge.BrickColor = BrickColor.new(color)
+	wedge.Material = material or Enum.Material.Plastic
+	wedge.Anchored = true
+	wedge.CanCollide = true
+	wedge.Parent = parent
+	return wedge
+end
+
+local function createCylinder(parent, name, radius, height, position, color, material)
+	local cylinder = Instance.new("Part")
+	cylinder.Name = name
+	cylinder.Shape = Enum.PartType.Cylinder
+	cylinder.Size = Vector3.new(radius * 2, height, radius * 2)
+	cylinder.Position = position
+	cylinder.BrickColor = BrickColor.new(color)
+	cylinder.Material = material or Enum.Material.Plastic
+	cylinder.Anchored = true
+	cylinder.CanCollide = true
+	cylinder.Parent = parent
+	return cylinder
 end
 
 local function createFolder(name, parent)
@@ -28,325 +50,356 @@ local function createFolder(name, parent)
 	return folder
 end
 
-local city = createFolder("RPCity_Mega", workspace)
+local city = createFolder("MegaRP_City", workspace)
 
 -- ========== ОСНОВА ==========
-local ground = createPart(city, "Ground", Vector3.new(800, 1, 800), Vector3.new(0, -2, 0), "Dark green", Enum.Material.Grass)
+local ground = createPart(city, "Ground", Vector3.new(4000, 1, 4000), Vector3.new(0, -2, 0), "Dark green", Enum.Material.Grass)
 
--- ========== РІЧКА ==========
-local riverFolder = createFolder("River", city)
+-- ========== ШИРОКІ ЧОРНІ ДОРОГИ З РОЗМІТКОЮ ==========
+local roadsFolder = createFolder("Roads", city)
 
--- Річка (синя лінія через все місто)
-local river = createPart(riverFolder, "River", Vector3.new(600, 0.5, 40), Vector3.new(0, -1, -100), "Bright blue", Enum.Material.SmoothPlastic, 0.3)
-
--- Береги річки
-local leftBank = createPart(riverFolder, "LeftBank", Vector3.new(600, 1, 15), Vector3.new(0, -0.5, -120), "Brown", Enum.Material.Sand)
-local rightBank = createPart(riverFolder, "RightBank", Vector3.new(600, 1, 15), Vector3.new(0, -0.5, -80), "Brown", Enum.Material.Sand)
-
--- ========== МІСТ ==========
-local bridgeFolder = createFolder("Bridge", city)
-
--- Основа мосту
-local bridgeBase = createPart(bridgeFolder, "BridgeBase", Vector3.new(60, 2, 30), Vector3.new(0, 0, -100), "Dark grey", Enum.Material.Concrete)
--- Дорога на мосту
-local bridgeRoad = createPart(bridgeFolder, "BridgeRoad", Vector3.new(58, 1, 14), Vector3.new(0, 1, -100), "Medium stone grey", Enum.Material.Concrete)
--- Перила
-local railingLeft = createPart(bridgeFolder, "RailingLeft", Vector3.new(60, 1, 1), Vector3.new(-22, 1.5, -100), "Silver", Enum.Material.Metal)
-local railingRight = createPart(bridgeFolder, "RailingRight", Vector3.new(60, 1, 1), Vector3.new(22, 1.5, -100), "Silver", Enum.Material.Metal)
--- Ліхтарі на мосту
-local function addBridgeLight(x)
-	local pole = createPart(bridgeFolder, "BridgeLight", Vector3.new(1, 5, 1), Vector3.new(x, 2, -100), "Dark grey", Enum.Material.Metal)
-	local lamp = createPart(bridgeFolder, "BridgeLamp", Vector3.new(2, 1, 2), Vector3.new(x, 4.5, -100), "Bright yellow", Enum.Material.Neon)
-end
-addBridgeLight(-15)
-addBridgeLight(15)
-
--- ========== ВОКЗАЛ ==========
-local trainFolder = createFolder("TrainStation", city)
-
--- Головна будівля вокзалу
-local stationMain = createPart(trainFolder, "StationMain", Vector3.new(50, 15, 40), Vector3.new(-200, 0, 150), "White", Enum.Material.Brick)
--- Дах вокзалу
-local stationRoof = createPart(trainFolder, "StationRoof", Vector3.new(54, 2, 44), Vector3.new(-200, 8, 150), "Bright red", Enum.Material.Wood)
--- Годинник на вокзалі
-local clock = createPart(trainFolder, "Clock", Vector3.new(4, 4, 1), Vector3.new(-200, 7, 170), "Gold", Enum.Material.Metal)
--- Платформа
-local platform = createPart(trainFolder, "Platform", Vector3.new(80, 1, 20), Vector3.new(-200, 0, 190), "Medium stone grey", Enum.Material.Concrete)
--- Колії
-local function addTrack(x)
-	local track = createPart(trainFolder, "Track", Vector3.new(100, 0.2, 3), Vector3.new(x, 0.5, 210), "Dark grey", Enum.Material.Metal)
-	local trackWood = createPart(trainFolder, "TrackWood", Vector3.new(100, 0.3, 0.5), Vector3.new(x, 0.3, 210), "Brown", Enum.Material.Wood)
-end
-addTrack(-210)
-addTrack(-205)
-addTrack(190)
-addTrack(195)
-
--- ========== ЖИТЛОВИЙ РАЙОН ==========
-local housesFolder = createFolder("Houses", city)
-
-local function createHouse(pos, color, size)
-	local house = createPart(housesFolder, "House", Vector3.new(size.X, size.Y, size.Z), pos, color, Enum.Material.Brick)
-	-- Дах
-	local roof = createPart(housesFolder, "Roof", Vector3.new(size.X + 1, 1.5, size.Z + 1), Vector3.new(pos.X, pos.Y + size.Y/2 + 0.8, pos.Z), "Bright red", Enum.Material.Wood)
-	-- Двері
-	local door = createPart(housesFolder, "Door", Vector3.new(2, 3, 0.5), Vector3.new(pos.X, pos.Y + 1, pos.Z + size.Z/2), "Brown", Enum.Material.Wood)
-	-- Вікна
-	local window = createPart(housesFolder, "Window", Vector3.new(2, 2, 0.5), Vector3.new(pos.X - 2, pos.Y + 2, pos.Z + size.Z/2), "Sky blue", Enum.Material.Glass, 0.5)
-	local window2 = createPart(housesFolder, "Window2", Vector3.new(2, 2, 0.5), Vector3.new(pos.X + 2, pos.Y + 2, pos.Z + size.Z/2), "Sky blue", Enum.Material.Glass, 0.5)
+-- Функція створення дороги з розміткою
+local function createHighway(pos, size, rotation)
+	local road = createPart(roadsFolder, "Highway", size, pos, "Really black", Enum.Material.Concrete)
+	
+	-- Біла розмітка по центру
+	local lineWidth = 0.8
+	local lineLength = size.X - 4
+	if size.X > size.Z then
+		local centerLine = createPart(roadsFolder, "CenterLine", Vector3.new(lineLength, 0.2, lineWidth), 
+			Vector3.new(pos.X, pos.Y + 0.3, pos.Z), "White", Enum.Material.Neon)
+		-- Переривиста розмітка
+		for i = -lineLength/2 + 5, lineLength/2, 15 do
+			local dash = createPart(roadsFolder, "Dash", Vector3.new(5, 0.2, lineWidth), 
+				Vector3.new(pos.X + i, pos.Y + 0.3, pos.Z), "White", Enum.Material.Neon)
+		end
+	else
+		local centerLine = createPart(roadsFolder, "CenterLine", Vector3.new(lineWidth, 0.2, size.Z - 4), 
+			Vector3.new(pos.X, pos.Y + 0.3, pos.Z), "White", Enum.Material.Neon)
+		for i = -size.Z/2 + 5, size.Z/2, 15 do
+			local dash = createPart(roadsFolder, "Dash", Vector3.new(lineWidth, 0.2, 5), 
+				Vector3.new(pos.X, pos.Y + 0.3, pos.Z + i), "White", Enum.Material.Neon)
+		end
+	end
+	
+	-- Бічні лінії
+	local sideLine1 = createPart(roadsFolder, "SideLine", Vector3.new(size.X, 0.2, 0.5), 
+		Vector3.new(pos.X, pos.Y + 0.3, pos.Z + size.Z/2 - 0.8), "White", Enum.Material.Neon)
+	local sideLine2 = createPart(roadsFolder, "SideLine", Vector3.new(size.X, 0.2, 0.5), 
+		Vector3.new(pos.X, pos.Y + 0.3, pos.Z - size.Z/2 + 0.8), "White", Enum.Material.Neon)
 end
 
--- Будинки в північному районі
-local housesPos = {
-	{pos = Vector3.new(-250, 0, 100), color = "Bright yellow", size = Vector3.new(10, 8, 10)},
-	{pos = Vector3.new(-230, 0, 100), color = "Bright blue", size = Vector3.new(10, 8, 10)},
-	{pos = Vector3.new(-210, 0, 100), color = "Bright green", size = Vector3.new(10, 8, 10)},
-	{pos = Vector3.new(-190, 0, 100), color = "Bright orange", size = Vector3.new(10, 8, 10)},
-	{pos = Vector3.new(-250, 0, 80), color = "Bright yellow", size = Vector3.new(10, 8, 10)},
-	{pos = Vector3.new(-230, 0, 80), color = "Bright blue", size = Vector3.new(10, 8, 10)},
-	{pos = Vector3.new(-210, 0, 80), color = "Bright green", size = Vector3.new(10, 8, 10)},
-	{pos = Vector3.new(-190, 0, 80), color = "Bright orange", size = Vector3.new(10, 8, 10)},
-	{pos = Vector3.new(-250, 0, 60), color = "Bright yellow", size = Vector3.new(10, 8, 10)},
-	{pos = Vector3.new(-230, 0, 60), color = "Bright blue", size = Vector3.new(10, 8, 10)},
-	{pos = Vector3.new(-210, 0, 60), color = "Bright green", size = Vector3.new(10, 8, 10)},
-	{pos = Vector3.new(-190, 0, 60), color = "Bright orange", size = Vector3.new(10, 8, 10)},
-	-- Великі будинки
-	{pos = Vector3.new(-270, 0, 130), color = "White", size = Vector3.new(15, 12, 15)},
-	{pos = Vector3.new(-150, 0, 130), color = "White", size = Vector3.new(15, 12, 15)},
-	{pos = Vector3.new(-270, 0, 40), color = "White", size = Vector3.new(15, 12, 15)},
-	{pos = Vector3.new(-150, 0, 40), color = "White", size = Vector3.new(15, 12, 15)},
+-- Головні магістралі (широкі дороги)
+local highways = {
+	{pos = Vector3.new(0, 0, 0), size = Vector3.new(3000, 0.5, 24), rot = 0}, -- горизонталь
+	{pos = Vector3.new(0, 0, 0), size = Vector3.new(24, 0.5, 3000), rot = 0}, -- вертикаль
+	{pos = Vector3.new(-800, 0, 500), size = Vector3.new(1200, 0.5, 24), rot = 0},
+	{pos = Vector3.new(800, 0, 500), size = Vector3.new(1200, 0.5, 24), rot = 0},
+	{pos = Vector3.new(0, 0, -600), size = Vector3.new(2000, 0.5, 24), rot = 0},
+	{pos = Vector3.new(0, 0, 800), size = Vector3.new(2000, 0.5, 24), rot = 0},
+	{pos = Vector3.new(-400, 0, -400), size = Vector3.new(800, 0.5, 24), rot = 0},
+	{pos = Vector3.new(400, 0, -400), size = Vector3.new(800, 0.5, 24), rot = 0},
 }
 
-for _, h in ipairs(housesPos) do
-	createHouse(h.pos, h.color, h.size)
+for _, road in ipairs(highways) do
+	createHighway(road.pos, road.size, road.rot)
+end
+
+-- Вулиці між кварталами
+local streets = {
+	{pos = Vector3.new(-200, 0, 200), size = Vector3.new(400, 0.5, 18)},
+	{pos = Vector3.new(200, 0, 200), size = Vector3.new(400, 0.5, 18)},
+	{pos = Vector3.new(-200, 0, -200), size = Vector3.new(400, 0.5, 18)},
+	{pos = Vector3.new(200, 0, -200), size = Vector3.new(400, 0.5, 18)},
+	{pos = Vector3.new(0, 0, 400), size = Vector3.new(800, 0.5, 18)},
+	{pos = Vector3.new(0, 0, -400), size = Vector3.new(800, 0.5, 18)},
+	{pos = Vector3.new(600, 0, 0), size = Vector3.new(18, 0.5, 800)},
+	{pos = Vector3.new(-600, 0, 0), size = Vector3.new(18, 0.5, 800)},
+}
+
+for _, street in ipairs(streets) do
+	local road = createPart(roadsFolder, "Street", street.size, street.pos, "Really black", Enum.Material.Concrete)
+	local centerLine = createPart(roadsFolder, "StreetLine", Vector3.new(street.size.X - 2, 0.2, 1), 
+		Vector3.new(street.pos.X, street.pos.Y + 0.3, street.pos.Z), "White", Enum.Material.Neon)
+end
+
+-- ========== ВОКЗАЛ З ВЕЛИЧЕЗНИМ СПАВНОМ ==========
+local trainFolder = createFolder("TrainStation", city)
+
+-- Головна будівля вокзалу (величезна)
+local stationBase = createPart(trainFolder, "StationBase", Vector3.new(120, 20, 80), Vector3.new(-600, 0, 400), "White", Enum.Material.Brick)
+-- Колони вокзалу
+for x = -660, -540, 20 do
+	for z = 360, 440, 20 do
+		local column = createPart(trainFolder, "Column", Vector3.new(2, 15, 2), Vector3.new(x, 7, z), "Light grey", Enum.Material.Marble)
+	end
+end
+-- Дах вокзалу
+local stationRoof = createPart(trainFolder, "StationRoof", Vector3.new(130, 3, 90), Vector3.new(-600, 10, 400), "Dark grey", Enum.Material.Metal)
+-- Годинникова вежа
+local clockTower = createPart(trainFolder, "ClockTower", Vector3.new(12, 25, 12), Vector3.new(-540, 12, 440), "Brown", Enum.Material.Brick)
+local clockFace = createPart(trainFolder, "ClockFace", Vector3.new(8, 8, 1), Vector3.new(-540, 22, 446), "White", Enum.Material.Neon)
+-- Вхідні двері
+local entrance = createPart(trainFolder, "Entrance", Vector3.new(20, 8, 3), Vector3.new(-600, 4, 360), "Dark brown", Enum.Material.Wood)
+-- Платформи
+local platforms = {
+	{pos = Vector3.new(-550, 0, 480), size = Vector3.new(100, 1, 15)},
+	{pos = Vector3.new(-650, 0, 480), size = Vector3.new(100, 1, 15)},
+	{pos = Vector3.new(-550, 0, 320), size = Vector3.new(100, 1, 15)},
+	{pos = Vector3.new(-650, 0, 320), size = Vector3.new(100, 1, 15)},
+}
+for _, plat in ipairs(platforms) do
+	createPart(trainFolder, "Platform", plat.size, plat.pos, "Light grey", Enum.Material.Concrete)
+end
+-- Колії
+local function addTrack(pos)
+	local track = createPart(trainFolder, "Track", Vector3.new(120, 0.2, 2), pos, "Dark grey", Enum.Material.Metal)
+	local rail = createPart(trainFolder, "Rail", Vector3.new(120, 0.3, 0.3), Vector3.new(pos.X, pos.Y + 0.2, pos.Z - 0.8), "Silver", Enum.Material.Metal)
+	local rail2 = createPart(trainFolder, "Rail", Vector3.new(120, 0.3, 0.3), Vector3.new(pos.X, pos.Y + 0.2, pos.Z + 0.8), "Silver", Enum.Material.Metal)
+end
+addTrack(Vector3.new(-550, 0.5, 470))
+addTrack(Vector3.new(-550, 0.5, 465))
+addTrack(Vector3.new(-650, 0.5, 470))
+addTrack(Vector3.new(-650, 0.5, 465))
+
+-- ========== ВЕЛИЧЕЗНИЙ СПАВН БІЛЯ ВОКЗАЛУ ==========
+local spawnFolder = createFolder("Spawns", city)
+for i = 1, 50 do
+	local spawn = Instance.new("SpawnLocation")
+	spawn.Name = "Spawn_Main_" .. i
+	spawn.Position = Vector3.new(-600 + math.random(-30, 30), 2, 380 + math.random(-20, 20))
+	spawn.Neutral = true
+	spawn.Duration = 1
+	spawn.Parent = spawnFolder
+end
+
+-- ========== ВЕЛИЧЕЗНІ КВАРТИРИ РІЗНОГО КОЛЬОРУ ТА ФОРМИ ==========
+local apartmentsFolder = createFolder("Apartments", city)
+
+local function createApartment(pos, color, width, height, depth, style)
+	local building = createPart(apartmentsFolder, "Apartment", Vector3.new(width, height, depth), pos, color, Enum.Material.Brick)
+	
+	-- Вікна
+	local windowColor = "Sky blue"
+	local windowMaterial = Enum.Material.Glass
+	for i = -width/2 + 2, width/2 - 2, 4 do
+		for j = 1, math.floor(height/3) - 1, 2 do
+			local window = createPart(apartmentsFolder, "Window", Vector3.new(3, 3, 0.3), 
+				Vector3.new(pos.X + i, pos.Y + j * 2, pos.Z + depth/2 + 0.1), windowColor, windowMaterial, 0.4)
+			local windowBack = createPart(apartmentsFolder, "WindowBack", Vector3.new(3, 3, 0.3), 
+				Vector3.new(pos.X + i, pos.Y + j * 2, pos.Z - depth/2 - 0.1), windowColor, windowMaterial, 0.4)
+		end
+	end
+	
+	-- Балкони
+	if style == "modern" then
+		for i = -width/2 + 3, width/2 - 3, 5 do
+			local balcony = createPart(apartmentsFolder, "Balcony", Vector3.new(4, 0.2, 2), 
+				Vector3.new(pos.X + i, pos.Y + height/2 - 2, pos.Z + depth/2 + 1), "Light grey", Enum.Material.Concrete)
+			local railing = createPart(apartmentsFolder, "Railing", Vector3.new(4, 1, 0.2), 
+				Vector3.new(pos.X + i, pos.Y + height/2 - 1, pos.Z + depth/2 + 2), "Dark grey", Enum.Material.Metal)
+		end
+	end
+	
+	-- Дах
+	local roofColor = style == "modern" and "Dark grey" or "Bright red"
+	local roof = createPart(apartmentsFolder, "Roof", Vector3.new(width + 1, 1, depth + 1), 
+		Vector3.new(pos.X, pos.Y + height/2 + 0.5, pos.Z), roofColor, Enum.Material.Wood)
+	
+	return building
+end
+
+-- Квартири навколо вокзалу
+local apartmentZones = {
+	-- Північний район
+	{pos = Vector3.new(-400, 0, 600), color = "Bright blue", w = 20, h = 18, d = 15, style = "modern"},
+	{pos = Vector3.new(-360, 0, 600), color = "Bright red", w = 20, h = 18, d = 15, style = "modern"},
+	{pos = Vector3.new(-320, 0, 600), color = "Bright green", w = 20, h = 18, d = 15, style = "modern"},
+	{pos = Vector3.new(-280, 0, 600), color = "Bright yellow", w = 20, h = 18, d = 15, style = "modern"},
+	{pos = Vector3.new(-400, 0, 550), color = "Bright orange", w = 20, h = 20, d = 15, style = "classic"},
+	{pos = Vector3.new(-360, 0, 550), color = "Bright violet", w = 20, h = 20, d = 15, style = "classic"},
+	{pos = Vector3.new(-320, 0, 550), color = "Bright blue", w = 20, h = 22, d = 15, style = "modern"},
+	{pos = Vector3.new(-280, 0, 550), color = "Bright red", w = 20, h = 22, d = 15, style = "modern"},
+	-- Південний район
+	{pos = Vector3.new(-400, 0, 250), color = "Bright green", w = 18, h = 16, d = 18, style = "classic"},
+	{pos = Vector3.new(-360, 0, 250), color = "Bright blue", w = 18, h = 16, d = 18, style = "classic"},
+	{pos = Vector3.new(-320, 0, 250), color = "Bright yellow", w = 18, h = 16, d = 18, style = "classic"},
+	{pos = Vector3.new(-280, 0, 250), color = "Bright orange", w = 18, h = 16, d = 18, style = "classic"},
+	{pos = Vector3.new(-400, 0, 200), color = "Bright violet", w = 22, h = 24, d = 18, style = "modern"},
+	{pos = Vector3.new(-360, 0, 200), color = "Bright red", w = 22, h = 24, d = 18, style = "modern"},
+	{pos = Vector3.new(-320, 0, 200), color = "Bright green", w = 22, h = 24, d = 18, style = "modern"},
+	{pos = Vector3.new(-280, 0, 200), color = "Bright blue", w = 22, h = 24, d = 18, style = "modern"},
+	-- Східний район
+	{pos = Vector3.new(200, 0, 400), color = "Bright orange", w = 25, h = 20, d = 20, style = "modern"},
+	{pos = Vector3.new(240, 0, 400), color = "Bright red", w = 25, h = 20, d = 20, style = "modern"},
+	{pos = Vector3.new(280, 0, 400), color = "Bright blue", w = 25, h = 20, d = 20, style = "modern"},
+	{pos = Vector3.new(320, 0, 400), color = "Bright green", w = 25, h = 20, d = 20, style = "modern"},
+	{pos = Vector3.new(200, 0, 350), color = "Bright yellow", w = 20, h = 18, d = 18, style = "classic"},
+	{pos = Vector3.new(240, 0, 350), color = "Bright violet", w = 20, h = 18, d = 18, style = "classic"},
+	{pos = Vector3.new(280, 0, 350), color = "Bright orange", w = 20, h = 18, d = 18, style = "classic"},
+	{pos = Vector3.new(320, 0, 350), color = "Bright red", w = 20, h = 18, d = 18, style = "classic"},
+	-- Західний район
+	{pos = Vector3.new(-800, 0, 0), color = "Bright blue", w = 24, h = 22, d = 20, style = "modern"},
+	{pos = Vector3.new(-760, 0, 0), color = "Bright green", w = 24, h = 22, d = 20, style = "modern"},
+	{pos = Vector3.new(-720, 0, 0), color = "Bright red", w = 24, h = 22, d = 20, style = "modern"},
+	{pos = Vector3.new(-680, 0, 0), color = "Bright yellow", w = 24, h = 22, d = 20, style = "modern"},
+	{pos = Vector3.new(-800, 0, -50), color = "Bright orange", w = 20, h = 18, d = 18, style = "classic"},
+	{pos = Vector3.new(-760, 0, -50), color = "Bright violet", w = 20, h = 18, d = 18, style = "classic"},
+	{pos = Vector3.new(-720, 0, -50), color = "Bright blue", w = 20, h = 18, d = 18, style = "classic"},
+	{pos = Vector3.new(-680, 0, -50), color = "Bright green", w = 20, h = 18, d = 18, style = "classic"},
+}
+
+for _, apt in ipairs(apartmentZones) do
+	createApartment(apt.pos, apt.color, apt.w, apt.h, apt.d, apt.style)
+end
+
+-- ========== 20 ГАРАЖІВ СІРОГО КОЛЬОРУ З ПЛОСКИМ ДАХОМ ==========
+local garagesFolder = createFolder("Garages", city)
+
+local garagePositions = {
+	{-450, 0, 450}, {-430, 0, 450}, {-410, 0, 450}, {-390, 0, 450}, {-370, 0, 450},
+	{-450, 0, 430}, {-430, 0, 430}, {-410, 0, 430}, {-390, 0, 430}, {-370, 0, 430},
+	{300, 0, 300}, {320, 0, 300}, {340, 0, 300}, {360, 0, 300}, {380, 0, 300},
+	{300, 0, 280}, {320, 0, 280}, {340, 0, 280}, {360, 0, 280}, {380, 0, 280},
+}
+
+for i, pos in ipairs(garagePositions) do
+	local garage = createPart(garagesFolder, "Garage_" .. i, Vector3.new(8, 4, 6), Vector3.new(pos[1], 0, pos[2]), "Dark grey", Enum.Material.Concrete)
+	local roof = createPart(garagesFolder, "GarageRoof_" .. i, Vector3.new(9, 0.5, 7), Vector3.new(pos[1], 2.2, pos[2]), "Light grey", Enum.Material.Concrete)
+	local door = createPart(garagesFolder, "GarageDoor_" .. i, Vector3.new(6, 3, 0.3), Vector3.new(pos[1], 1.5, pos[2] + 3.2), "Silver", Enum.Material.Metal)
+end
+
+-- ========== АЗС (5 ШТУК) ==========
+local gasStationsFolder = createFolder("GasStations", city)
+
+local gasPositions = {
+	{pos = Vector3.new(-500, 0, -300), dir = 0},
+	{pos = Vector3.new(500, 0, -300), dir = 0},
+	{pos = Vector3.new(-500, 0, 700), dir = 0},
+	{pos = Vector3.new(500, 0, 700), dir = 0},
+	{pos = Vector3.new(0, 0, -800), dir = 0},
+}
+
+for i, gp in ipairs(gasPositions) do
+	local gasFolder = createFolder("GasStation_" .. i, gasStationsFolder)
+	local canopy = createPart(gasFolder, "Canopy", Vector3.new(30, 1, 30), gp.pos, "Light grey", Enum.Material.Metal)
+	-- Колонки
+	for c = -10, 10, 10 do
+		local pump = createCylinder(gasFolder, "Pump", 1.5, 2.5, Vector3.new(gp.pos.X + c, gp.pos.Y + 1, gp.pos.Z + 5), "White", Enum.Material.Metal)
+		local pumpHead = createPart(gasFolder, "PumpHead", Vector3.new(2, 0.5, 2), Vector3.new(gp.pos.X + c, gp.pos.Y + 2.3, gp.pos.Z + 5), "Bright red", Enum.Material.Plastic)
+	end
+	-- Магазин на АЗС
+	local shop = createPart(gasFolder, "MiniMart", Vector3.new(12, 5, 10), Vector3.new(gp.pos.X + 15, 0, gp.pos.Z), "White", Enum.Material.Brick)
+	local shopSign = createPart(gasFolder, "ShopSign", Vector3.new(8, 1, 1), Vector3.new(gp.pos.X + 15, 3, gp.pos.Z + 5.5), "Bright red", Enum.Material.Neon)
+end
+
+-- ========== 4 АВТОСАЛОНИ ==========
+local dealershipsFolder = createFolder("Dealerships", city)
+
+local dealerPositions = {
+	{pos = Vector3.new(-300, 0, -400), color = "Bright blue", name = "Premium Motors"},
+	{pos = Vector3.new(300, 0, -400), color = "Bright red", name = "Speed Auto"},
+	{pos = Vector3.new(-300, 0, 800), color = "Bright green", name = "Elite Cars"},
+	{pos = Vector3.new(300, 0, 800), color = "Bright yellow", name = "City Auto"},
+}
+
+for i, dealer in ipairs(dealerPositions) do
+	local dealerFolder = createFolder("Dealership_" .. i, dealershipsFolder)
+	local mainBuilding = createPart(dealerFolder, "Showroom", Vector3.new(40, 8, 30), dealer.pos, dealer.color, Enum.Material.Glass, 0.3)
+	local roof = createPart(dealerFolder, "Roof", Vector3.new(44, 1, 34), Vector3.new(dealer.pos.X, dealer.pos.Y + 4.5, dealer.pos.Z), "Dark grey", Enum.Material.Metal)
+	-- Вивіска
+	local sign = createPart(dealerFolder, "Sign", Vector3.new(20, 2, 1), Vector3.new(dealer.pos.X, dealer.pos.Y + 5, dealer.pos.Z + 16), "White", Enum.Material.Neon)
+	-- Машини на вітрині
+	local carColors = {"Bright red", "Bright blue", "Black", "White", "Silver"}
+	for c = -15, 15, 10 do
+		local car = createPart(dealerFolder, "DisplayCar", Vector3.new(5, 1.5, 9), Vector3.new(dealer.pos.X + c, dealer.pos.Y + 0.8, dealer.pos.Z - 12), carColors[math.random(#carColors)], Enum.Material.Metal)
+	end
+end
+
+-- ========== ФОНАРІ (ДЕТАЛІЗОВАНІ) ==========
+local lightsFolder = createFolder("StreetLights", city)
+
+local function createDetailedLight(pos)
+	local pole = createCylinder(lightsFolder, "LightPole", 0.8, 10, Vector3.new(pos.X, pos.Y + 5, pos.Z), "Dark grey", Enum.Material.Metal)
+	local lampBase = createPart(lightsFolder, "LampBase", Vector3.new(2, 1, 2), Vector3.new(pos.X, pos.Y + 9.5, pos.Z), "Silver", Enum.Material.Metal)
+	local lamp = createPart(lightsFolder, "Lamp", Vector3.new(3, 1.5, 3), Vector3.new(pos.X, pos.Y + 10, pos.Z), "Bright yellow", Enum.Material.Neon)
+	lamp.Transparency = 0.2
+	local arm = createPart(lightsFolder, "Arm", Vector3.new(2, 0.3, 1.5), Vector3.new(pos.X + 1.5, pos.Y + 9, pos.Z), "Dark grey", Enum.Material.Metal)
+end
+
+for x = -1000, 1000, 40 do
+	for z = -1000, 1000, 40 do
+		if math.abs(x) > 50 or math.abs(z) > 50 then
+			createDetailedLight(Vector3.new(x, 0, z))
+		end
+	end
 end
 
 -- ========== БІЗНЕСИ ==========
 local businessesFolder = createFolder("Businesses", city)
 
 -- Поліція
-local police = createPart(businessesFolder, "PoliceStation", Vector3.new(30, 12, 30), Vector3.new(-80, 0, 50), "Dark blue", Enum.Material.Brick)
-local policeSign = createPart(businessesFolder, "PoliceSign", Vector3.new(12, 1, 2), Vector3.new(-80, 6, 65), "White", Enum.Material.Neon)
-policeSign.BrickColor = BrickColor.new("Bright blue")
-
+local police = createPart(businessesFolder, "PoliceHQ", Vector3.new(50, 15, 40), Vector3.new(-200, 0, -300), "Dark blue", Enum.Material.Brick)
+local policeSign = createPart(businessesFolder, "PoliceSign", Vector3.new(15, 2, 2), Vector3.new(-200, 8, -280), "White", Enum.Material.Neon)
 -- Лікарня
-local hospital = createPart(businessesFolder, "Hospital", Vector3.new(35, 12, 35), Vector3.new(80, 0, 50), "White", Enum.Material.Brick)
-local hospitalSign = createPart(businessesFolder, "HospitalSign", Vector3.new(12, 1, 2), Vector3.new(80, 6, 65), "White", Enum.Material.Neon)
-hospitalSign.BrickColor = BrickColor.new("Bright red")
-
+local hospital = createPart(businessesFolder, "Hospital", Vector3.new(55, 18, 45), Vector3.new(200, 0, -300), "White", Enum.Material.Brick)
+local hospitalSign = createPart(businessesFolder, "HospitalSign", Vector3.new(15, 2, 2), Vector3.new(200, 10, -280), "Bright red", Enum.Material.Neon)
 -- Банк
-local bank = createPart(businessesFolder, "Bank", Vector3.new(20, 10, 20), Vector3.new(0, 0, 80), "Dark green", Enum.Material.Marble)
-local bankSign = createPart(businessesFolder, "BankSign", Vector3.new(8, 1, 2), Vector3.new(0, 5, 90), "Gold", Enum.Material.Neon)
-
--- Ресторан
-local restaurant = createPart(businessesFolder, "Restaurant", Vector3.new(18, 6, 18), Vector3.new(-50, 0, -50), "Bright red", Enum.Material.Brick)
-
--- Магазин
-local shop = createPart(businessesFolder, "Shop", Vector3.new(15, 6, 15), Vector3.new(50, 0, -50), "Bright orange", Enum.Material.Brick)
-
--- Заправка
-local gasStation = createPart(businessesFolder, "GasStation", Vector3.new(25, 4, 25), Vector3.new(-150, 0, -30), "Bright red", Enum.Material.Metal)
-
--- Автосервіс/Гаражі
-local garage = createPart(businessesFolder, "Garage", Vector3.new(30, 5, 40), Vector3.new(150, 0, -50), "Dark grey", Enum.Material.Metal)
-
--- Кафе
-local cafe = createPart(businessesFolder, "Cafe", Vector3.new(12, 5, 12), Vector3.new(-30, 0, 120), "Brown", Enum.Material.Wood)
-
--- Бар/Клуб
-local bar = createPart(businessesFolder, "Bar", Vector3.new(15, 5, 15), Vector3.new(30, 0, 120), "Dark red", Enum.Material.Brick)
-
--- Школа
-local school = createPart(businessesFolder, "School", Vector3.new(50, 10, 60), Vector3.new(0, 0, -150), "Bright yellow", Enum.Material.Brick)
-
--- Пожежна
-local fireStation = createPart(businessesFolder, "FireStation", Vector3.new(35, 8, 35), Vector3.new(200, 0, 100), "Bright red", Enum.Material.Brick)
-
--- Супермаркет
-local supermarket = createPart(businessesFolder, "Supermarket", Vector3.new(40, 6, 30), Vector3.new(-180, 0, -80), "Light blue", Enum.Material.Brick)
-
--- Кінотеатр
-local cinema = createPart(businessesFolder, "Cinema", Vector3.new(30, 8, 40), Vector3.new(180, 0, -80), "Purple", Enum.Material.Brick)
-
--- ========== РИНОК ==========
-local marketFolder = createFolder("Market", city)
-
-local marketSquare = createPart(marketFolder, "MarketSquare", Vector3.new(50, 1, 50), Vector3.new(0, 0, -30), "Light grey", Enum.Material.Concrete)
-
--- Ринкові намети
-local function createMarketStall(pos, color)
-	local stall = createPart(marketFolder, "Stall", Vector3.new(8, 3, 8), pos, color, Enum.Material.Wood)
-	local roof = createPart(marketFolder, "StallRoof", Vector3.new(10, 0.5, 10), Vector3.new(pos.X, pos.Y + 2, pos.Z), "Bright red", Enum.Material.Wood)
+local bank = createPart(businessesFolder, "Bank", Vector3.new(30, 12, 30), Vector3.new(0, 0, -500), "Dark green", Enum.Material.Marble)
+-- Торговий центр
+local mall = createPart(businessesFolder, "Mall", Vector3.new(80, 12, 60), Vector3.new(0, 0, 200), "Light grey", Enum.Material.Concrete)
+-- Ресторани
+local restaurants = {{-150,0,150}, {150,0,150}, {-150,0,-150}, {150,0,-150}}
+for _, r in ipairs(restaurants) do
+	createPart(businessesFolder, "Restaurant", Vector3.new(15, 6, 15), Vector3.new(r[1], 0, r[2]), "Bright red", Enum.Material.Brick)
 end
-
-local stalls = {
-	Vector3.new(-20, 1, -30), Vector3.new(-10, 1, -30), Vector3.new(0, 1, -30), 
-	Vector3.new(10, 1, -30), Vector3.new(20, 1, -30), Vector3.new(-20, 1, -20),
-	Vector3.new(-10, 1, -20), Vector3.new(0, 1, -20), Vector3.new(10, 1, -20),
-	Vector3.new(20, 1, -20), Vector3.new(-20, 1, -40), Vector3.new(-10, 1, -40),
-	Vector3.new(0, 1, -40), Vector3.new(10, 1, -40), Vector3.new(20, 1, -40),
-}
-
-for _, pos in ipairs(stalls) do
-	createMarketStall(pos, "Brown")
-end
-
--- ========== ДОРОГИ ==========
-local roadsFolder = createFolder("Roads", city)
-
--- Головні дороги
-local mainRoads = {
-	{pos = Vector3.new(0, 0, 0), size = Vector3.new(500, 0.5, 12), color = "Medium stone grey"}, -- горизонталь
-	{pos = Vector3.new(0, 0, 0), size = Vector3.new(12, 0.5, 400), color = "Medium stone grey"}, -- вертикаль
-	{pos = Vector3.new(-200, 0, 150), size = Vector3.new(200, 0.5, 12), color = "Medium stone grey"}, -- до вокзалу
-	{pos = Vector3.new(200, 0, 150), size = Vector3.new(200, 0.5, 12), color = "Medium stone grey"},
-	{pos = Vector3.new(0, 0, -150), size = Vector3.new(300, 0.5, 12), color = "Medium stone grey"}, -- до школи
-	{pos = Vector3.new(-150, 0, -80), size = Vector3.new(12, 0.5, 150), color = "Medium stone grey"}, -- до заправки
-	{pos = Vector3.new(150, 0, -80), size = Vector3.new(12, 0.5, 150), color = "Medium stone grey"}, -- до автосервісу
-	{pos = Vector3.new(0, 0, 200), size = Vector3.new(400, 0.5, 12), color = "Medium stone grey"}, -- північна
-}
-
-for _, road in ipairs(mainRoads) do
-	createPart(roadsFolder, "Road", road.size, road.pos, road.color, Enum.Material.Concrete)
-end
-
--- Розмітка доріг (білі лінії)
-local function addRoadLine(pos, size)
-	local line = createPart(roadsFolder, "RoadLine", size, pos, "White", Enum.Material.Neon)
-	line.Transparency = 0.3
-end
-
-addRoadLine(Vector3.new(0, 0.2, 0), Vector3.new(400, 0.1, 1))
-addRoadLine(Vector3.new(0, 0.2, 0), Vector3.new(1, 0.1, 300))
 
 -- ========== ПАРК ==========
 local parkFolder = createFolder("Park", city)
-
-local parkGround = createPart(parkFolder, "ParkGround", Vector3.new(100, 0.5, 100), Vector3.new(250, 0, -150), "Bright green", Enum.Material.Grass)
-
--- Дерева в парку
-local function createTree(pos)
-	local trunk = createPart(parkFolder, "TreeTrunk", Vector3.new(2, 4, 2), pos, "Brown", Enum.Material.Wood)
-	local leaves = createPart(parkFolder, "TreeLeaves", Vector3.new(5, 3, 5), Vector3.new(pos.X, pos.Y + 2.5, pos.Z), "Bright green", Enum.Material.Foliage)
-end
-
-for x = 200, 300, 15 do
-	for z = -200, -100, 15 do
-		if math.random() > 0.3 then
-			createTree(Vector3.new(x, 0.5, z))
-		end
-	end
-end
-
+local parkGround = createPart(parkFolder, "ParkGround", Vector3.new(200, 0.5, 200), Vector3.new(700, 0, -600), "Bright green", Enum.Material.Grass)
 -- Фонтан
-local fountainBase = createPart(parkFolder, "Fountain", Vector3.new(8, 1, 8), Vector3.new(250, 0.5, -150), "Light grey", Enum.Material.Concrete)
-local fountainWater = createPart(parkFolder, "FountainWater", Vector3.new(6, 0.2, 6), Vector3.new(250, 1, -150), "Bright blue", Enum.Material.Neon, 0.5)
-
--- Лавки
-local function createBench(pos)
-	local bench = createPart(parkFolder, "Bench", Vector3.new(4, 1, 1.5), pos, "Brown", Enum.Material.Wood)
-end
-
-createBench(Vector3.new(240, 0.5, -140))
-createBench(Vector3.new(245, 0.5, -145))
-createBench(Vector3.new(255, 0.5, -155))
-createBench(Vector3.new(260, 0.5, -160))
-
--- ========== ФЕРМА ==========
-local farmFolder = createFolder("Farm", city)
-
-local farmField = createPart(farmFolder, "Field", Vector3.new(80, 0.5, 80), Vector3.new(-280, 0, -180), "Bright green", Enum.Material.Grass)
-local barn = createPart(farmFolder, "Barn", Vector3.new(20, 8, 25), Vector3.new(-300, 0, -150), "Brown", Enum.Material.Wood)
-local silo = createPart(farmFolder, "Silo", Vector3.new(6, 12, 6), Vector3.new(-270, 0, -140), "Silver", Enum.Material.Metal)
-
--- ========== СПАВН ТОЧКИ ==========
-local spawnsFolder = createFolder("Spawns", city)
-
-local spawnPoints = {
-	Vector3.new(0, 2, 0),        -- центр
-	Vector3.new(-200, 2, 150),   -- вокзал
-	Vector3.new(-80, 2, 50),     -- поліція
-	Vector3.new(80, 2, 50),      -- лікарня
-	Vector3.new(0, 2, 80),       -- банк
-	Vector3.new(-50, 2, -50),    -- ресторан
-	Vector3.new(50, 2, -50),     -- магазин
-	Vector3.new(-150, 2, -30),   -- заправка
-	Vector3.new(150, 2, -50),    -- гараж
-	Vector3.new(0, 2, -150),     -- школа
-	Vector3.new(0, 2, -30),      -- ринок
-	Vector3.new(250, 2, -150),   -- парк
-	Vector3.new(-280, 2, -180),  -- ферма
-	Vector3.new(180, 2, -80),    -- кінотеатр
-	Vector3.new(-180, 2, -80),   -- супермаркет
-	Vector3.new(-250, 2, 80),    -- житловий район
-}
-
-for i, pos in ipairs(spawnPoints) do
-	local spawn = Instance.new("SpawnLocation")
-	spawn.Name = "Spawn_" .. i
-	spawn.Position = pos
-	spawn.Neutral = true
-	spawn.Duration = 2
-	spawn.Parent = spawnsFolder
-end
-
--- ========== ОСВІТЛЕННЯ ==========
-local lightsFolder = createFolder("StreetLights", city)
-
-local function addStreetLight(pos)
-	local pole = createPart(lightsFolder, "LightPole", Vector3.new(1, 8, 1), pos, "Dark grey", Enum.Material.Metal)
-	local lamp = createPart(lightsFolder, "Lamp", Vector3.new(2, 1, 2), Vector3.new(pos.X, pos.Y + 4, pos.Z), "Bright yellow", Enum.Material.Neon)
-end
-
-for x = -300, 300, 50 do
-	for z = -200, 200, 50 do
-		if math.abs(x) > 30 or math.abs(z) > 30 then
-			addStreetLight(Vector3.new(x, 0, z))
+local fountain = createPart(parkFolder, "Fountain", Vector3.new(12, 2, 12), Vector3.new(700, 0.5, -600), "Light grey", Enum.Material.Concrete)
+local fountainWater = createPart(parkFolder, "FountainWater", Vector3.new(10, 0.5, 10), Vector3.new(700, 1.5, -600), "Bright blue", Enum.Material.Neon, 0.5)
+-- Дерева
+for x = 600, 800, 12 do
+	for z = -700, -500, 12 do
+		if math.random() > 0.4 then
+			local trunk = createCylinder(parkFolder, "Tree", 1.5, 6, Vector3.new(x, 0.5, z), "Brown", Enum.Material.Wood)
+			local leaves = createPart(parkFolder, "Leaves", Vector3.new(5, 4, 5), Vector3.new(x, 3.5, z), "Bright green", Enum.Material.Foliage)
 		end
 	end
+end
+
+-- ========== МАШИНИ ==========
+local vehiclesFolder = createFolder("Vehicles", city)
+local carColors = {"Bright red", "Bright blue", "Black", "White", "Silver", "Dark green", "Bright yellow"}
+for i = 1, 150 do
+	local car = createPart(vehiclesFolder, "Car_" .. i, Vector3.new(4, 1.5, 8), 
+		Vector3.new(math.random(-900, 900), 0.5, math.random(-900, 900)), 
+		carColors[math.random(#carColors)], Enum.Material.Metal)
 end
 
 -- ========== НАЛАШТУВАННЯ ==========
 local lighting = game:GetService("Lighting")
 lighting.TimeOfDay = "14:00:00"
-lighting.Ambient = Color3.fromRGB(180, 180, 180)
-lighting.OutdoorAmbient = Color3.fromRGB(140, 140, 140)
-lighting.FogEnd = 1000
+lighting.Ambient = Color3.fromRGB(200, 200, 200)
+lighting.OutdoorAmbient = Color3.fromRGB(160, 160, 160)
+lighting.FogEnd = 2000
 
--- ========== МАШИНИ (ДЕКОР) ==========
-local vehiclesFolder = createFolder("Vehicles", city)
-
-local function createCar(pos, color)
-	local body = createPart(vehiclesFolder, "CarBody", Vector3.new(4, 1.5, 8), pos, color, Enum.Material.Metal)
-	local roof = createPart(vehiclesFolder, "CarRoof", Vector3.new(3, 0.5, 4), Vector3.new(pos.X, pos.Y + 1, pos.Z), color, Enum.Material.Metal)
-end
-
-local carPositions = {
-	Vector3.new(-80, 0.5, 45), Vector3.new(-75, 0.5, 45), Vector3.new(75, 0.5, 45), Vector3.new(80, 0.5, 45),
-	Vector3.new(-150, 0.5, -35), Vector3.new(150, 0.5, -55), Vector3.new(0, 0.5, 75), Vector3.new(-200, 0.5, 145),
-}
-
-for _, pos in ipairs(carPositions) do
-	local colors = {"Bright red", "Bright blue", "Bright green", "Bright yellow", "White", "Black"}
-	createCar(pos, colors[math.random(#colors)])
-end
-
--- ========== ФІНАЛЬНЕ ПОВІДОМЛЕННЯ ==========
-print("=" .. string.rep("=", 50))
-print("✅ MEGA RP CITY СТВОРЕНА!")
-print("=" .. string.rep("=", 50))
-print("📍 Локації:")
-print("   • Вокзал з платформою та коліями")
-print("   • Міст через річку")
-print("   • 16+ житлових будинків")
-print("   • Поліція, лікарня, банк, школа")
-print("   • Ресторан, магазин, кафе, бар")
-print("   • Заправка, автосервіс, гаражі")
-print("   • Супермаркет, кінотеатр")
-print("   • Ринок з 15 наметами")
+-- ========== ФІНАЛ ==========
+print("=" .. string.rep("=", 60))
+print("🔥 MEGA RP CITY V4 - ULTRA DETAILED СТВОРЕНА!")
+print("=" .. string.rep("=", 60))
+print("📍 ОБ'ЄКТИ НА КАРТІ:")
+print("   • Широкі чорні дороги з білою розміткою")
+print("   • Гігантський вокзал з 50+ спавнами")
+print("   • " .. #apartmentZones .. " величезних квартир різних кольорів")
+print("   • 20 гаражів сірого кольору")
+print("   • 5 АЗС з магазинами та колонками")
+print("   • 4 автосалони з вітринами")
+print("   • " .. math.floor((2000/40)^2) .. "+ деталізованих ліхтарів")
+print("   • Поліція, лікарня, банк, ТРЦ")
 print("   • Парк з фонтаном та деревами")
-print("   • Ферма з амбаром")
-print("   • " .. #spawnPoints .. " спавн точок")
-print("=" .. string.rep("=", 50))
-print("🎮 Зупини гру (Stop), карта залишиться в workspace")
-print("📁 Шукай папку 'RPCity_Mega' в workspace")
+print("   • 150+ машин")
+print("=" .. string.rep("=", 60))
+print("🎮 Зупини гру, карта залишиться в workspace в папці 'MegaRP_City'")
